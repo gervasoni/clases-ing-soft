@@ -19,22 +19,6 @@ def sum_numbers(a: int, b: int) -> Dict[str, int]:
     return {"result": a + b}
 
 
-@router.get("/sum-slow")
-def sum_slow(a: int, b: int) -> Dict[str, int]:
-    """Suma dos numeros de forma iterativa (lenta).
-
-    :param a: Primer sumando.
-    :param b: Segundo sumando.
-    :return: Resultado de la suma.
-    """
-    result = 0
-    for _ in range(a):
-        result += 1
-    for _ in range(b):
-        result += 1
-    return {"result": result}
-
-
 @router.get("/sum-square")
 def sum_square(a: int, b: int) -> Dict[str, int]:
     """Suma dos numeros llamando al endpoint ``/sum`` y devuelve el cuadrado.

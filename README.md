@@ -62,7 +62,6 @@ Antes de empezar, necesitas tener instalado en tu computadora:
 | Metodo | Endpoint | Descripcion |
 |---|---|---|
 | `GET` | `/sum?a=1&b=2` | Suma dos numeros. |
-| `GET` | `/sum-slow?a=1&b=2` | Suma dos numeros de forma lenta (iterativa). |
 | `GET` | `/sum-square?a=1&b=2` | Llama internamente a `/sum` por red y devuelve el cuadrado de la suma. |
 
 ### Usuarios
@@ -71,7 +70,7 @@ Antes de empezar, necesitas tener instalado en tu computadora:
 |---|---|---|
 | `GET` | `/user` | Lista todos los usuarios. |
 | `POST` | `/user` | Crea un nuevo usuario. |
-| `GET` | `/user/{id}` | Obtiene un usuario por ID. |
-| `PUT` | `/user/{id}` | Reemplaza un usuario completamente. |
-| `PATCH` | `/user/{id}` | Actualiza parcialmente un usuario. |
-| `DELETE` | `/user/{id}` | Elimina un usuario. |
+| `GET` | `/user/{username}` | Obtiene un usuario por username. |
+| `PUT` | `/user/{username}` | Reemplaza un usuario completamente. |
+| `PATCH` | `/user/{username}` | Actualiza parcialmente un usuario. |
+| `DELETE` | `/user/{username}` | Elimina un usuario. |
