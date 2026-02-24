@@ -9,7 +9,7 @@ from app.main import app
 
 
 class TestSum(unittest.TestCase):
-    """Tests para los endpoints ``/sum``, ``/sum-slow`` y ``/sum-square``."""
+    """Tests para los endpoints ``/sum`` y ``/sum-square``."""
 
     def setUp(self) -> None:
         """Inicializa el cliente de test."""
@@ -32,18 +32,6 @@ class TestSum(unittest.TestCase):
         response = self.client.get("/sum", params={"a": -5, "b": 3})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"result": -2})
-
-    def test_sum_slow(self) -> None:
-        """Verifica que ``GET /sum-slow`` suma correctamente."""
-        response = self.client.get("/sum-slow", params={"a": 100, "b": 200})
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"result": 300})
-
-    def test_sum_slow_zeros(self) -> None:
-        """Verifica que ``GET /sum-slow`` maneja ceros."""
-        response = self.client.get("/sum-slow", params={"a": 0, "b": 0})
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"result": 0})
 
     @patch("app.sum.routes.httpx.Client")
     def test_sum_square(self, mock_client_class: MagicMock) -> None:

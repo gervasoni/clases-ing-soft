@@ -7,19 +7,22 @@ from pydantic import BaseModel
 
 router = APIRouter()
 
-users_db: Dict[int, Dict] = {}
-next_id = 1  # pylint: disable=invalid-name
+users_db: Dict[str, Dict] = {}
 
 
 class UserCreate(BaseModel):
     """Esquema para la creacion de un usuario.
 
+    :param username: Nombre de usuario (identificador unico).
     :param name: Nombre del usuario.
     :param email: Email del usuario.
+    :param dni: DNI del usuario.
     """
 
+    username: str
     name: str
     email: str
+    dni: int
 
 
 class UserUpdate(BaseModel):
@@ -27,10 +30,12 @@ class UserUpdate(BaseModel):
 
     :param name: Nombre del usuario (opcional).
     :param email: Email del usuario (opcional).
+    :param dni: DNI del usuario (opcional).
     """
 
     name: Optional[str] = None
     email: Optional[str] = None
+    dni: Optional[int] = None
 
 
 @router.get("/user")
@@ -47,69 +52,82 @@ def create_user(user: UserCreate) -> Dict:
     """Crea un nuevo usuario.
 
     :param user: Datos del usuario a crear.
-    :return: Usuario creado con su ID asignado.
+    :return: Usuario creado.
+    :raises HTTPException: Si el username ya existe (409).
     """
-    global next_id  # pylint: disable=global-statement
-    user_data = {"id": next_id, "name": user.name, "email": user.email}
-    users_db[next_id] = user_data
-    next_id += 1
+    if user.username in users_db:
+        raise HTTPException(status_code=409, detail="Username already exists")
+    user_data = {
+        "username": user.username,
+        "name": user.name,
+        "email": user.email,
+        "dni": user.dni,
+    }
+    users_db[user.username] = user_data
     return user_data
 
 
-@router.get("/user/{user_id}")
-def get_user(user_id: int) -> Dict:
-    """Obtiene un usuario por su ID.
+@router.get("/user/{username}")
+def get_user(username: str) -> Dict:
+    """Obtiene un usuario por su username.
 
-    :param user_id: ID del usuario.
+    :param username: Nombre de usuario.
     :return: Datos del usuario.
     :raises HTTPException: Si el usuario no existe (404).
     """
-    if user_id not in users_db:
+    if username not in users_db:
         raise HTTPException(status_code=404, detail="User not found")
-    return users_db[user_id]
+    return users_db[username]
 
 
-@router.put("/user/{user_id}")
-def replace_user(user_id: int, user: UserCreate) -> Dict:
+@router.put("/user/{username}")
+def replace_user(username: str, user: UserCreate) -> Dict:
     """Reemplaza completamente un usuario.
 
-    :param user_id: ID del usuario a reemplazar.
+    :param username: Nombre de usuario a reemplazar.
     :param user: Nuevos datos del usuario.
     :return: Usuario actualizado.
     :raises HTTPException: Si el usuario no existe (404).
     """
-    if user_id not in users_db:
+    if username not in users_db:
         raise HTTPException(status_code=404, detail="User not found")
-    user_data = {"id": user_id, "name": user.name, "email": user.email}
-    users_db[user_id] = user_data
+    user_data = {
+        "username": username,
+        "name": user.name,
+        "email": user.email,
+        "dni": user.dni,
+    }
+    users_db[username] = user_data
     return user_data
 
 
-@router.patch("/user/{user_id}")
-def update_user(user_id: int, user: UserUpdate) -> Dict:
+@router.patch("/user/{username}")
+def update_user(username: str, user: UserUpdate) -> Dict:
     """Actualiza parcialmente un usuario.
 
-    :param user_id: ID del usuario a actualizar.
+    :param username: Nombre de usuario a actualizar.
     :param user: Campos a actualizar.
     :return: Usuario actualizado.
     :raises HTTPException: Si el usuario no existe (404).
     """
-    if user_id not in users_db:
+    if username not in users_db:
         raise HTTPException(status_code=404, detail="User not found")
     if user.name is not None:
-        users_db[user_id]["name"] = user.name
+        users_db[username]["name"] = user.name
     if user.email is not None:
-        users_db[user_id]["email"] = user.email
-    return users_db[user_id]
+        users_db[username]["email"] = user.email
+    if user.dni is not None:
+        users_db[username]["dni"] = user.dni
+    return users_db[username]
 
 
-@router.delete("/user/{user_id}", status_code=204)
-def delete_user(user_id: int) -> None:
+@router.delete("/user/{username}", status_code=204)
+def delete_user(username: str) -> None:
     """Elimina un usuario.
 
-    :param user_id: ID del usuario a eliminar.
+    :param username: Nombre de usuario a eliminar.
     :raises HTTPException: Si el usuario no existe (404).
     """
-    if user_id not in users_db:
+    if username not in users_db:
         raise HTTPException(status_code=404, detail="User not found")
-    del users_db[user_id]
+    del users_db[username]

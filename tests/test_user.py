@@ -15,34 +15,69 @@ class TestUser(unittest.TestCase):
         """Inicializa el cliente de test y limpia la base de datos."""
         self.client = TestClient(app)
         user_routes.users_db.clear()
-        user_routes.next_id = 1
 
     def test_create_user(self) -> None:
         """Verifica que ``POST /user`` crea un usuario."""
         response = self.client.post(
-            "/user", json={"name": "Juan", "email": "juan@example.com"}
+            "/user",
+            json={
+                "username": "juan01",
+                "name": "Juan",
+                "email": "juan@example.com",
+                "dni": 12345678,
+            },
         )
         self.assertEqual(response.status_code, 201)
         data = response.json()
+        self.assertEqual(data["username"], "juan01")
         self.assertEqual(data["name"], "Juan")
         self.assertEqual(data["email"], "juan@example.com")
-        self.assertIn("id", data)
+        self.assertEqual(data["dni"], 12345678)
+
+    def test_create_user_duplicate_username(self) -> None:
+        """Verifica que ``POST /user`` devuelve 409 si el username ya existe."""
+        self.client.post(
+            "/user",
+            json={
+                "username": "juan01",
+                "name": "Juan",
+                "email": "juan@example.com",
+                "dni": 12345678,
+            },
+        )
+        response = self.client.post(
+            "/user",
+            json={
+                "username": "juan01",
+                "name": "Otro",
+                "email": "otro@example.com",
+                "dni": 99999999,
+            },
+        )
+        self.assertEqual(response.status_code, 409)
 
     def test_get_user(self) -> None:
-        """Verifica que ``GET /user/{id}`` devuelve el usuario correcto."""
-        post_response = self.client.post(
-            "/user", json={"name": "Maria", "email": "maria@example.com"}
+        """Verifica que ``GET /user/{username}`` devuelve el usuario correcto."""
+        self.client.post(
+            "/user",
+            json={
+                "username": "maria01",
+                "name": "Maria",
+                "email": "maria@example.com",
+                "dni": 22334455,
+            },
         )
-        user_id = post_response.json()["id"]
 
-        response = self.client.get(f"/user/{user_id}")
+        response = self.client.get("/user/maria01")
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["username"], "maria01")
         self.assertEqual(response.json()["name"], "Maria")
         self.assertEqual(response.json()["email"], "maria@example.com")
+        self.assertEqual(response.json()["dni"], 22334455)
 
     def test_get_user_not_found(self) -> None:
-        """Verifica que ``GET /user/{id}`` devuelve 404 si no existe."""
-        response = self.client.get("/user/99999")
+        """Verifica que ``GET /user/{username}`` devuelve 404 si no existe."""
+        response = self.client.get("/user/noexiste")
         self.assertEqual(response.status_code, 404)
 
     def test_list_users(self) -> None:
@@ -51,67 +86,126 @@ class TestUser(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [])
 
-        self.client.post("/user", json={"name": "A", "email": "a@example.com"})
-        self.client.post("/user", json={"name": "B", "email": "b@example.com"})
+        self.client.post(
+            "/user",
+            json={
+                "username": "user_a",
+                "name": "A",
+                "email": "a@example.com",
+                "dni": 11111111,
+            },
+        )
+        self.client.post(
+            "/user",
+            json={
+                "username": "user_b",
+                "name": "B",
+                "email": "b@example.com",
+                "dni": 22222222,
+            },
+        )
 
         response = self.client.get("/user")
         self.assertEqual(len(response.json()), 2)
 
     def test_put_user(self) -> None:
-        """Verifica que ``PUT /user/{id}`` reemplaza el usuario."""
-        post_response = self.client.post(
-            "/user", json={"name": "Pedro", "email": "pedro@example.com"}
+        """Verifica que ``PUT /user/{username}`` reemplaza el usuario."""
+        self.client.post(
+            "/user",
+            json={
+                "username": "pedro01",
+                "name": "Pedro",
+                "email": "pedro@example.com",
+                "dni": 33333333,
+            },
         )
-        user_id = post_response.json()["id"]
 
         response = self.client.put(
-            f"/user/{user_id}",
-            json={"name": "Pedro Updated", "email": "pedro2@example.com"},
+            "/user/pedro01",
+            json={
+                "username": "pedro01",
+                "name": "Pedro Updated",
+                "email": "pedro2@example.com",
+                "dni": 44444444,
+            },
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["name"], "Pedro Updated")
         self.assertEqual(response.json()["email"], "pedro2@example.com")
+        self.assertEqual(response.json()["dni"], 44444444)
 
     def test_put_user_not_found(self) -> None:
-        """Verifica que ``PUT /user/{id}`` devuelve 404 si no existe."""
+        """Verifica que ``PUT /user/{username}`` devuelve 404 si no existe."""
         response = self.client.put(
-            "/user/99999",
-            json={"name": "Ghost", "email": "ghost@example.com"},
+            "/user/noexiste",
+            json={
+                "username": "noexiste",
+                "name": "Ghost",
+                "email": "ghost@example.com",
+                "dni": 99999999,
+            },
         )
         self.assertEqual(response.status_code, 404)
 
     def test_patch_user(self) -> None:
-        """Verifica que ``PATCH /user/{id}`` actualiza parcialmente."""
-        post_response = self.client.post(
-            "/user", json={"name": "Ana", "email": "ana@example.com"}
+        """Verifica que ``PATCH /user/{username}`` actualiza parcialmente."""
+        self.client.post(
+            "/user",
+            json={
+                "username": "ana01",
+                "name": "Ana",
+                "email": "ana@example.com",
+                "dni": 55555555,
+            },
         )
-        user_id = post_response.json()["id"]
 
-        response = self.client.patch(f"/user/{user_id}", json={"name": "Ana Updated"})
+        response = self.client.patch("/user/ana01", json={"name": "Ana Updated"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["name"], "Ana Updated")
         self.assertEqual(response.json()["email"], "ana@example.com")
+        self.assertEqual(response.json()["dni"], 55555555)
+
+    def test_patch_user_dni(self) -> None:
+        """Verifica que ``PATCH /user/{username}`` actualiza el DNI."""
+        self.client.post(
+            "/user",
+            json={
+                "username": "luis01",
+                "name": "Luis",
+                "email": "luis@example.com",
+                "dni": 66666666,
+            },
+        )
+
+        response = self.client.patch("/user/luis01", json={"dni": 77777777})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["dni"], 77777777)
+        self.assertEqual(response.json()["name"], "Luis")
 
     def test_patch_user_not_found(self) -> None:
-        """Verifica que ``PATCH /user/{id}`` devuelve 404 si no existe."""
-        response = self.client.patch("/user/99999", json={"name": "Ghost"})
+        """Verifica que ``PATCH /user/{username}`` devuelve 404 si no existe."""
+        response = self.client.patch("/user/noexiste", json={"name": "Ghost"})
         self.assertEqual(response.status_code, 404)
 
     def test_delete_user(self) -> None:
-        """Verifica que ``DELETE /user/{id}`` elimina el usuario."""
-        post_response = self.client.post(
+        """Verifica que ``DELETE /user/{username}`` elimina el usuario."""
+        self.client.post(
             "/user",
-            json={"name": "Delete Me", "email": "delete@example.com"},
+            json={
+                "username": "todelete",
+                "name": "Delete Me",
+                "email": "delete@example.com",
+                "dni": 88888888,
+            },
         )
-        user_id = post_response.json()["id"]
 
-        response = self.client.delete(f"/user/{user_id}")
+        response = self.client.delete("/user/todelete")
         self.assertEqual(response.status_code, 204)
 
-        response = self.client.get(f"/user/{user_id}")
+        response = self.client.get("/user/todelete")
         self.assertEqual(response.status_code, 404)
 
     def test_delete_user_not_found(self) -> None:
-        """Verifica que ``DELETE /user/{id}`` devuelve 404 si no existe."""
-        response = self.client.delete("/user/99999")
+        """Verifica que ``DELETE /user/{username}`` devuelve 404 si no existe."""
+        response = self.client.delete("/user/noexiste")
         self.assertEqual(response.status_code, 404)
