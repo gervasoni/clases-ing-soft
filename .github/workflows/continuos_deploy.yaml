@@ -13,7 +13,6 @@ env:
   AWS_REGION: us-east-2
   ECR_REPOSITORY: api
   EC2_INSTANCE_TAG: api
-  PORT_MAPPING: "80:8000"
 
 jobs:
   build-and-push:
@@ -75,7 +74,7 @@ jobs:
               \"sudo docker pull $IMAGE_URI\",
               \"sudo docker stop mi-app-contenedor || true\",
               \"sudo docker rm mi-app-contenedor || true\",
-              \"sudo docker run -d --name mi-app-contenedor -p ${{ env.PORT_MAPPING }} $IMAGE_URI\"
+              \"sudo docker run -d --name mi-app-contenedor $IMAGE_URI\"
             ]}" \
             --timeout-seconds 120 \
             --query "Command.CommandId" \
