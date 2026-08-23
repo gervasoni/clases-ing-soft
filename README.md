@@ -29,14 +29,16 @@ docker push <registry>/<namespace>/<repository>:back-1.0-dev
 
 ## CI: publicar en un registro automáticamente
 
-`.github/workflows/docker-publish.yml` hace lo mismo que los comandos de arriba, pero en cada push a `feature/docker`. Buildea una imagen por servicio (matrix) y la publica en **dos registros a la vez**:
+Hay **un workflow por registro**, los dos disparados por cada push a `feature/docker`. Cada uno buildea una imagen por servicio (matrix `py-app` / `react-app`):
 
-| Registro | Nombre de la imagen | Autenticación |
-|---|---|---|
-| GHCR | `ghcr.io/<owner>/<repo>/py-app` | `GITHUB_TOKEN` (automático, no hay que configurar nada) |
-| Docker Hub | `docker.io/<usuario>/<repo>-py-app` | `vars.DOCKERHUB_USERNAME` + `secrets.DOCKERHUB_TOKEN` |
+| Workflow | Registro | Nombre de la imagen | Autenticación |
+|---|---|---|---|
+| `.github/workflows/docker-publish-ghcr.yml` | GHCR | `ghcr.io/<owner>/<repo>/py-app` | `GITHUB_TOKEN` (automático) |
+| `.github/workflows/docker-publish-dockerhub.yml` | Docker Hub | `docker.io/<usuario>/<repo>-py-app` | `vars.DOCKERHUB_USERNAME` + `secrets.DOCKERHUB_TOKEN` |
 
-GHCR soporta namespaces anidados (`owner/repo/servicio`); Docker Hub no, por eso ahí el servicio va con guion (`repo-servicio`). El build se hace **una sola vez** y se pushea a los dos registros, porque los tags apuntan al mismo build.
+La diferencia de nombres no es capricho: GHCR soporta namespaces anidados (`owner/repo/servicio`), Docker Hub no, así que ahí el servicio va como sufijo (`repo-servicio`).
+
+> **Ojo:** al estar separados, cada workflow buildea por su cuenta. Las dos imágenes son equivalentes pero **no comparten digest**. Si se necesita el mismo digest en ambos registros, hay que buildear una vez y copiar la imagen entre registros (`crane copy` / `skopeo copy`) en vez de rebuildear.
 
 ### Tags que genera
 
@@ -53,12 +55,16 @@ Además embebe labels OCI (`org.opencontainers.image.source`, `.revision`, etc.)
 docker inspect ghcr.io/<owner>/<repo>/py-app:sha-a1b2c3d --format '{{json .Config.Labels}}'
 ```
 
-### Configurar Docker Hub (opcional)
+### Configurar Docker Hub
 
-Si no están las credenciales, el workflow publica solo en GHCR y avisa; no falla. Para habilitarlo, en **Settings → Secrets and variables → Actions** del repo:
+En **Settings → Secrets and variables → Actions** del repo:
 
-- Variable `DOCKERHUB_USERNAME`: el usuario/organización de Docker Hub.
-- Secret `DOCKERHUB_TOKEN`: un *access token* de Docker Hub (Account Settings → Personal access tokens), **no** la contraseña.
+- Variable `DOCKERHUB_USERNAME`: el usuario/organización de Docker Hub (en minúsculas, **no** el email).
+- Secret `DOCKERHUB_TOKEN`: un *access token* (Account settings → Personal access tokens), **no** la contraseña.
+
+Si no están cargadas, el workflow de Docker Hub avisa y se saltea; no falla.
+
+**Error típico:** `malformed HTTP Authorization header`. Las credenciales viajan en un header `Authorization: Basic base64(usuario:token)`; si el secret quedó guardado con un salto de línea, un espacio o comillas (pasa al copiar/pegar), el header sale roto. El workflow ahora limpia y valida las credenciales antes del login, pero si el token está mal pegado de raíz conviene regenerarlo y pegarlo de una sola línea.
 
 Las imágenes de GHCR nacen privadas: para hacer `docker pull` sin login hay que marcarlas públicas en la página del package.
 
