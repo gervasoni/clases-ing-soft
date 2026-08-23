@@ -27,6 +27,43 @@ docker push <registry>/<namespace>/<repository>:back-1.0-dev
 ```
 ---
 
+## CI: publicar en un registro automáticamente
+
+`.github/workflows/docker-publish.yml` hace lo mismo que los comandos de arriba, pero en cada push a `feature/docker`. Buildea una imagen por servicio (matrix) y la publica en **dos registros a la vez**:
+
+| Registro | Nombre de la imagen | Autenticación |
+|---|---|---|
+| GHCR | `ghcr.io/<owner>/<repo>/py-app` | `GITHUB_TOKEN` (automático, no hay que configurar nada) |
+| Docker Hub | `docker.io/<usuario>/<repo>-py-app` | `vars.DOCKERHUB_USERNAME` + `secrets.DOCKERHUB_TOKEN` |
+
+GHCR soporta namespaces anidados (`owner/repo/servicio`); Docker Hub no, por eso ahí el servicio va con guion (`repo-servicio`). El build se hace **una sola vez** y se pushea a los dos registros, porque los tags apuntan al mismo build.
+
+### Tags que genera
+
+`docker/metadata-action` genera los tags según la convención estándar:
+
+- `sha-a1b2c3d` → inmutable, atado al commit. **Es el único que sirve para deployar o hacer rollback.**
+- `feature-docker` → tag de rama, se mueve en cada push. Sirve para probar, no para deployar.
+- `1.2.3`, `1.2`, `1` → si se taggea el repo con `v1.2.3`.
+- `latest` → solo en la rama default, y es un puntero móvil (ver "Errores comunes").
+
+Además embebe labels OCI (`org.opencontainers.image.source`, `.revision`, etc.) en la imagen, así se puede trazar de qué commit salió:
+
+```bash
+docker inspect ghcr.io/<owner>/<repo>/py-app:sha-a1b2c3d --format '{{json .Config.Labels}}'
+```
+
+### Configurar Docker Hub (opcional)
+
+Si no están las credenciales, el workflow publica solo en GHCR y avisa; no falla. Para habilitarlo, en **Settings → Secrets and variables → Actions** del repo:
+
+- Variable `DOCKERHUB_USERNAME`: el usuario/organización de Docker Hub.
+- Secret `DOCKERHUB_TOKEN`: un *access token* de Docker Hub (Account Settings → Personal access tokens), **no** la contraseña.
+
+Las imágenes de GHCR nacen privadas: para hacer `docker pull` sin login hay que marcarlas públicas en la página del package.
+
+---
+
 ## Errores comunes
 
 - **Usar `latest` como tag de imagen**
