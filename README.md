@@ -113,3 +113,6 @@ docker compose down -v
 # Ver imágenes locales
 docker images
 ```
+## Demo GitHub Actions
+
+Workflow de publicación automática de imágenes Docker.
