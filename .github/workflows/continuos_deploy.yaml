@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 env:
-  AWS_REGION: sa-east-1
+  AWS_REGION: us-east-2
   ECR_REPOSITORY: api
   EC2_INSTANCE_TAG: api
   PORT_MAPPING: "8000:8000"
