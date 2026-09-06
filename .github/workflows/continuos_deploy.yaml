@@ -68,9 +68,8 @@ jobs:
             --targets "Key=tag:Name,Values=${{ env.EC2_INSTANCE_TAG }}" \
             --parameters "{\"commands\":[
               \"sudo yum update -y\",
-              \"sudo yum install docker -y || sudo amazon-linux-extras install docker -y\",
-              \"sudo systemctl enable docker\",
-              \"sudo systemctl start docker\",
+              \"sudo dnf install -y docker\",
+              \"sudo systemctl enable --now docker\",
               \"aws ecr get-login-password --region ${{ env.AWS_REGION }} | sudo docker login --username AWS --password-stdin $ECR_REGISTRY\",
               \"sudo docker pull $IMAGE_URI\",
               \"sudo docker stop mi-app-contenedor || true\",
