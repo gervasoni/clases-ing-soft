@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - aws-cd
+      - feature/aws-cd
 
 permissions:
   id-token: write
@@ -11,9 +11,9 @@ permissions:
 
 env:
   AWS_REGION: us-east-2
-  ECR_REPOSITORY: api
+  ECR_REPOSITORY: clase-api
   EC2_INSTANCE_TAG: api
-  PORT_MAPPING: "8000:8000"
+  PORT_MAPPING: "8000:5000"
 
 jobs:
   build-and-push:
