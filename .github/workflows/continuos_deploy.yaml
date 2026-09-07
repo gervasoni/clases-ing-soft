@@ -58,14 +58,31 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
+
           # Obtenemos la URI completa de la imagen
           IMAGE_URI="$ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest"
+
+          echo "Buscando EC2..."
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --region ${{ env.AWS_REGION }} \
+            --filters \
+              "Name=tag:Name,Values=${{ env.EC2_INSTANCE_TAG }}" \
+              "Name=instance-state-name,Values=running" \
+            --query "Reservations[].Instances[].InstanceId" \
+            --output text)
+
+          echo "Instance ID: $INSTANCE_ID"
+
+          if [ -z "$INSTANCE_ID" ] || [ "$INSTANCE_ID" = "None" ]; then
+            echo "ERROR: No se encontró una EC2 running con el tag Name=${{ env.EC2_INSTANCE_TAG }}"
+            exit 1
+          fi
 
           echo "Enviando comando de despliegue a la EC2..."
           COMMAND_ID=$(aws ssm send-command \
             --region ${{ env.AWS_REGION }} \
             --document-name "AWS-RunShellScript" \
-            --targets "Key=tag:Name,Values=${{ env.EC2_INSTANCE_TAG }}" \
+            --instance-ids "$INSTANCE_ID" \
             --parameters "{\"commands\":[
               \"sudo yum update -y\",
               \"sudo dnf install -y docker\",
@@ -81,17 +98,6 @@ jobs:
             --output text)
 
           echo "Command ID: $COMMAND_ID"
-
-          # Wait for the invocation to register
-          sleep 5
-
-          INSTANCE_ID=$(aws ssm list-command-invocations \
-            --command-id "$COMMAND_ID" \
-            --region ${{ env.AWS_REGION }} \
-            --query "CommandInvocations[0].InstanceId" \
-            --output text)
-
-          echo "Instance ID: $INSTANCE_ID"
 
           # Wait until the command finishes (success or failure)
           aws ssm wait command-executed \
